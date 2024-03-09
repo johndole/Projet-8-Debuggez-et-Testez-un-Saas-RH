@@ -9,9 +9,9 @@ import { ROUTES, ROUTES_PATH } from "../constants/routes";
 import NewBillUI from "../views/NewBillUI.js";
 import NewBill from "../containers/NewBill.js";
 import mockStore from "../__mocks__/store";
-//import router from "../app/Router";
+import router from "../app/Router";
 
-
+/*
 describe("Given I am connected as an employee", () => {
   
     describe("When I am on NewBill Page and I select a file with valid extension(jpg, jpeg, png)", () => {
@@ -57,17 +57,16 @@ describe("Given I am connected as an employee", () => {
        
       });
     })
-    */
 
 
   
   });
 
+*/
 
 
 
 
-/*
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on NewBill Page", () => {
@@ -260,4 +259,3 @@ beforeEach(() => {
   window.onNavigate(ROUTES_PATH.NewBill);
 });
 
-*/
