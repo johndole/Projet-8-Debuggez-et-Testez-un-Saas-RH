@@ -49,8 +49,8 @@ export default class NewBill {
                 .catch(error => console.error(error));
         } else {
             // Fichier avec une extension non autorisée
-            console.error('Extension de fichier non autorisée. Les extensions autorisées sont :', allowedExtensions.join(', '));
-            alert('Extension de fichier non autorisée. Les extensions autorisées sont : ' + allowedExtensions.join(', '));
+            console.error('Extension de fichier non autorisée. Les extensions autorisées sont :' + allowedExtensions.join(', '));
+            alert('Extension de fichier non autorisée. Les extensions autorisées sont :' + allowedExtensions.join(', '));
             this.document.querySelector(`input[data-testid="file"]`).value = '';
         }
     }
