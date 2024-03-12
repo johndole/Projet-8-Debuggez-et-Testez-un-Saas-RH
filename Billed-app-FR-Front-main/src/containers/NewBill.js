@@ -16,45 +16,42 @@ export default class NewBill {
     new Logout({ document, localStorage, onNavigate })
   }
   handleChangeFile = e => {
-    e.preventDefault();
-    const fileInput = this.document.querySelector(`input[data-testid="file"]`);
-    
-    if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const allowedExtensions = ['jpg', 'jpeg', 'png'];
-        const fileName = file.name;
-        const fileExtension = fileName.split('.').pop().toLowerCase();
-
-        if (allowedExtensions.includes(fileExtension)) {
-            // Continuer avec le traitement du fichier
-            const formData = new FormData();
-            const email = JSON.parse(localStorage.getItem("user")).email;
-            formData.append('file', file);
-            formData.append('email', email);
-
-            this.store
-                .bills()
-                .create({
-                    data: formData,
-                    headers: {
-                        noContentType: true
-                    }
-                })
-                .then(({ fileUrl, key }) => {
-                    console.log(fileUrl);
-                    this.billId = key;
-                    this.fileUrl = fileUrl;
-                    this.fileName = fileName;
-                })
-                .catch(error => console.error(error));
-        } else {
-            // Fichier avec une extension non autorisée
-            console.error('Extension de fichier non autorisée. Les extensions autorisées sont :' + allowedExtensions.join(', '));
-            alert('Extension de fichier non autorisée. Les extensions autorisées sont :' + allowedExtensions.join(', '));
-            this.document.querySelector(`input[data-testid="file"]`).value = '';
-        }
+    e.preventDefault()
+    //split the line to extract file and not only the DOM of the file
+    const fileInput = this.document.querySelector(`input[data-testid="file"]`)
+    const file = fileInput.files[0]
+    //Add a Regex to check file extension
+    const allowedExtensions = /(\.jpg|\.png|\.jpeg)$/i
+    if (!allowedExtensions.test(file.name)) {
+      alert('Veuillez sélectionner un fichier avec une extension .jpg, .png ou .jpeg.')
+      // Clean input file
+      fileInput.value = ''
+      return
     }
-}
+  
+    const filePath = e.target.value.split(/\\/g)
+    const fileName = filePath[filePath.length-1]
+    const formData = new FormData()
+    const email = JSON.parse(localStorage.getItem("user")).email
+    formData.append('file', file)
+    formData.append('email', email)
+
+    this.store
+      .bills()
+      .create({
+        data: formData,
+        headers: {
+          noContentType: true
+        }
+      })
+      .then(({fileUrl, key}) => {
+        console.log(fileUrl)
+        this.billId = key
+        this.fileUrl = fileUrl
+        this.fileName = fileName
+      }).catch(error => console.error(error))
+  }
+
 
   handleSubmit = e => {
     e.preventDefault()
@@ -89,4 +86,5 @@ export default class NewBill {
       .catch(error => console.error(error))
     }
   }
+
 }

@@ -2,19 +2,28 @@
  * @jest-environment jsdom
  */
 import {expect, jest, test} from '@jest/globals';
-import { screen, fireEvent, createEvent } from "@testing-library/dom";
+import { screen, fireEvent, createEvent, waitFor} from "@testing-library/dom";
 import { localStorageMock } from "../__mocks__/localStorage.js";
-import { ROUTES, ROUTES_PATH } from "../constants/routes";
+import { ROUTES, ROUTES_PATH} from "../constants/routes";
 
 import NewBillUI from "../views/NewBillUI.js";
 import NewBill from "../containers/NewBill.js";
 import mockStore from "../__mocks__/store";
-import { bills } from '../fixtures/bills.js';
-import router from "../app/Router";
+
+
+// Mock document and form elements
+document.body.innerHTML = NewBillUI();
+
+// Path to route files (Router.js),(routes.js)
+const onNavigateMock = (pathname) => {
+document.body.innerHTML = ROUTES({ pathname });
+};
+
+
 
 describe('Given I am connected as an employee', () => {
   describe('When I am on NewBill Page and I select a file with a valid extension (jpg, jpeg, png)', () => {
-    test('Then the system should continue with processing the file', () => {
+     test('It should handle file change event', async () => {
       // Arrange: Set up common conditions for the test with a valid file
       document.body.innerHTML = NewBillUI();
       const fileInput = screen.getByTestId('file');
@@ -31,15 +40,10 @@ describe('Given I am connected as an employee', () => {
         type: 'Employee',
       }));
     
-      // Path to route files (Router.js),(routes.js)
-      const onNavigate = (pathname) => {
-        document.body.innerHTML = ROUTES({ pathname });
-      };
-    
       // Capture instances of NewBill for configuring callbacks during testing
       const newBill = new NewBill({
         document,
-        onNavigate,
+        onNavigate: onNavigateMock,
         store: mockStore,
         localStorage: window.localStorage,
       });
@@ -60,10 +64,9 @@ describe('Given I am connected as an employee', () => {
   describe('When I am on NewBill Page and I select a file with an invalid extension', () => {
      beforeEach(() => {
       // Mock console.error and alert
-      jest.spyOn(console, 'error').mockImplementation(() => {});
-      jest.spyOn(global, 'alert').mockImplementation(() => {});
+      jest.spyOn(window, 'alert').mockImplementation(() => {});
     })
-    test('Then the system should display an error message', async () => {
+    test('It should display an error message alert', async () => {
     // Arrange: Set up common conditions for the test with a valid file
       document.body.innerHTML = NewBillUI();
       const fileInput = screen.getByTestId('file');
@@ -80,15 +83,10 @@ describe('Given I am connected as an employee', () => {
         type: 'Employee',
       }));
     
-      // Path to route files (Router.js),(routes.js)
-      const onNavigate = (pathname) => {
-        document.body.innerHTML = ROUTES({ pathname });
-      };
-    
       // Capture instances of NewBill for configuring callbacks during testing
         new NewBill({
           document,
-          onNavigate,
+          onNavigate: onNavigateMock,
           store: mockStore,
           localStorage: window.localStorage,
       });
@@ -97,14 +95,15 @@ describe('Given I am connected as an employee', () => {
         fireEvent.change(screen.getByTestId('file'));
       
       // Assert: Check if the file input is correctly handled
-        expect(console.error).toHaveBeenCalledWith('Extension de fichier non autorisée. Les extensions autorisées sont :jpg, jpeg, png');
-        expect(window.alert).toHaveBeenCalledWith('Extension de fichier non autorisée. Les extensions autorisées sont :jpg, jpeg, png');
+        expect(window.alert).toHaveBeenCalledWith('Veuillez sélectionner un fichier avec une extension .jpg, .png ou .jpeg.');
         expect(screen.getByTestId('file').value).toEqual('');
     });
   });
 
   describe('When I am on NewBill Page and I submit the form', () => {
    beforeEach(() => {
+    jest.spyOn(mockStore, "bills")
+    jest.clearAllMocks();
 
       // Mock localStorage for the file upload
         Object.defineProperty(
@@ -121,180 +120,90 @@ describe('Given I am connected as an employee', () => {
        
     });
 
-    test('It should send the bill on valid submission', () => {
-       // Arrange: Set up common conditions for the test with a valid file
-       const onNavigate = (pathname) => {
-        document.body.innerHTML = ROUTES({ pathname });
-       };
-
-       // Capture instances of NewBill for configuring callbacks during testing
-        const newBill = new NewBill({
+    test('It should handle a valid form submission', () => {
+      // Set up any necessary initial state or component instances
+      const newBill = new NewBill({
         document,
-        onNavigate,
-        store: null,
+        onNavigate: onNavigateMock,
+        store: mockStore,
         localStorage: window.localStorage,
       });
 
-      const form = screen.getByTestId('form-new-bill');
-      const handleSubmit = jest.fn((e) => newBill.handleSubmit(e));
-      form.addEventListener('submit', handleSubmit);
-      fireEvent.submit(form);
-      expect(handleSubmit).toHaveBeenCalled();
-    })
-
-
-  });
-
-})
-
-
-
-  
-
-
-
-
-
-/*
-
-describe("Given I am connected as an employee", () => {
-  describe("When I am on NewBill Page", () => {
-    test("Then mail icon in vertical layout should be active", () => {
-      const iconMail = screen.getByTestId('icon-mail')
-      
-      // expected values
-      expect(iconMail.className).toBe('active-icon')
-    })
-
-    test("Then there are a form to edit new bill", () => {
-      const html = NewBillUI()
-      document.body.innerHTML = html
-      
-      const title = screen.getAllByText("Envoyer une note de frais")
-      
-      // expected values
-      expect(title).toBeTruthy
-    })
-  })
-    
-  
-
-
-    
-    // POST
-    test("Then it should create a new bill", () => {
-      const onNavigate = (pathname) => {
-        document.body.innerHTML = ROUTES({ pathname });
+      // Mock the event object
+      const mockEvent = {
+        preventDefault: jest.fn(),
+        target: {
+          querySelector: jest.fn().mockImplementation(selector => {
+            switch (selector) {
+              case 'input[data-testid="datepicker"]':
+                return { value: '2024-03-11' };
+              case 'select[data-testid="expense-type"]':
+                return { value: 'Hôtel et logement' };
+              case 'input[data-testid="expense-name"]':
+                return { value: 'encore' };
+              case 'input[data-testid="amount"]':
+                return { value: '400' };
+              case 'input[data-testid="vat"]':
+                return { value: '80' };
+              case 'input[data-testid="pct"]':
+                return { value: '20' };
+              case 'textarea[data-testid="commentary"]':
+                return { value: 'séminaire billed' };
+              // Add other cases as needed
+              default:
+                return {};
+            }
+          }),
+        },
       };
-      
-      const newBill = new NewBill({
-        document,
-        onNavigate,
-        store: null,
-        localStorage: localStorageMock,
-      });
-      
-      const handleSubmit = jest.fn(newBill.handleSubmit);
-      const submitBtn = screen.getByTestId("form-new-bill");
-      submitBtn.addEventListener("submit", handleSubmit);
-      
-      fireEvent.submit(submitBtn);
-      
-      // expected values
-      expect(handleSubmit).toHaveBeenCalled();
+
+      // Call the handleSubmit function with the mock event
+      newBill.handleSubmit(mockEvent);
+
+      // Mock successful create response
+      mockStore.bills().create = jest.fn().mockResolvedValue({ fileUrl: 'https://localhost:3456/images/test.jpg', key: '1234' });
+     
+      // Perform assertions
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
+      expect(JSON.parse(localStorageMock.getItem('user'))).toEqual("{\"type\":\"Employee\",\"email\":\"user@example.com\"}");
     });
-  });
-  
-  describe("When I fill in the fields in the right format and I click on submit button", () => {
-    beforeEach(() => {
-      jest.spyOn(console, 'error').mockImplementation(() => {})
-      router()
-    })
-
-    test("Then I have an error server (500)", async () => {
-      const onNavigate = (pathname) => {
-        document.body.innerHTML = ROUTES({ pathname });
-      };
-
-      mockStore.bills.mockImplementationOnce(() => {
-        return {
-          update : jest.fn().mockRejectedValueOnce(false)
-        }
-      })
     
-      const newBill = new NewBill({document,  onNavigate, store: mockStore, localStorage: window.localStorage})
-      const handleSubmit = jest.fn((e) => newBill.handleSubmit(e))
+
+    test('It should create a new bill and redirect to Bills Page', async () => {
+    
+       // Capture instances of NewBill for configuring callbacks during testing
+        const newBill = new NewBill({
+        document,
+        onNavigate: onNavigateMock,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
+
+        // Mock successful create response
+        mockStore.bills().create = jest.fn().mockResolvedValue({ fileUrl: 'https://localhost:3456/images/test.jpg', key: '1234' });
       
-      const form = screen.getByTestId("form-new-bill");
-      form.addEventListener("submit", handleSubmit);
-      
-      try {
+        // Mock file input change event
+        const fileInput = document.querySelector(`input[data-testid="file"]`);
+        fireEvent.change(fileInput, { target: { files: [new File(['images'], 'test.jpg', { type: "jpg" })] } });
+
+        // Wait for asynchronous tasks to complete
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const form = screen.getByTestId('form-new-bill');
+        const handleSubmit = jest.fn((e) => newBill.handleSubmit(e));
+        form.addEventListener('submit', handleSubmit);
         fireEvent.submit(form);
-      } catch(err) {
-        // expected values
-        expect(err).toMatch('error');
-      }
-    })
-  })
-  
-  describe("When an error occurs on API", () => {
-    test("POST New Bill and fails with 404 message error", async () => {
-      mockStore.bills.mockImplementationOnce(() => {
-        return {
-          list : () =>  {
-            return Promise.reject(new Error("Erreur 404"))
-          }
-        }})
-        
-      window.onNavigate(ROUTES_PATH.Bills)
-      
-      await new Promise(process.nextTick);
-      const message = await screen.getByText(/Erreur 404/)
-      
-      // expected values
-      expect(message).toBeTruthy()
+
+        // Assertions
+        expect(handleSubmit).toHaveBeenCalled();
+        expect(mockStore.bills().create).toHaveBeenCalled();
+        expect(newBill.billId).toBe('1234');
+        expect(newBill.fileUrl).toBe('https://localhost:3456/images/test.jpg');
+        expect(fileInput.files[0].name).toBe('test.jpg');
+        onNavigateMock(ROUTES_PATH.Bills);
     })
 
-    test("POST New Bill and fails with 500 message error", async () => {
-      mockStore.bills.mockImplementationOnce(() => {
-        return {
-          list : () =>  {
-            return Promise.reject(new Error("Erreur 500"))
-          }
-        }})
+  });
 
-      window.onNavigate(ROUTES_PATH.Bills)
-      
-      await new Promise(process.nextTick);
-      const message = await screen.getByText(/Erreur 500/)
-      
-      // expected values
-      expect(message).toBeTruthy()
-    })
-  })
+
+
 });
-
-jest.mock("../app/store", () => mockStore);
-
-beforeEach(() => {
-  jest.spyOn(mockStore, "bills");
-  Object.defineProperty(window, "localStorage", { value: localStorageMock });
-  window.localStorage.setItem(
-    "user",
-    JSON.stringify({
-      type: "Employee",
-      email: "a@a",
-    })
-  );
-  
-  const root = document.createElement("div");
-  root.setAttribute("id", "root");
-  
-  document.body.appendChild(root);
-  
-  router();
-  
-  window.onNavigate(ROUTES_PATH.NewBill);
-});
-
-*/
