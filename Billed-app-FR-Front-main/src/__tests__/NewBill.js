@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import {expect, jest, test} from '@jest/globals';
-import { screen, fireEvent, createEvent, waitFor} from "@testing-library/dom";
+import { screen, fireEvent} from "@testing-library/dom";
 import { localStorageMock } from "../__mocks__/localStorage.js";
 import { ROUTES, ROUTES_PATH} from "../constants/routes";
 
