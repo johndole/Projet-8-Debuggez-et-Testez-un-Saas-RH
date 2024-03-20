@@ -105,7 +105,7 @@ describe("Given I am connected as an employee", () => {
         const iconsEye = screen.getAllByTestId('icon-eye')[0];
       
         // Trigger click event on each icon
-     const 
+  
           
           iconsEye.addEventListener('click', handleClickIconEyeMock);
           fireEvent.click(iconsEye);
