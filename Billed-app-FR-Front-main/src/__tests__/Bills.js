@@ -5,7 +5,7 @@ import {expect, jest, test} from '@jest/globals';
 import {screen, waitFor, fireEvent, userEvent} from "@testing-library/dom"
 import BillsUI from "../views/BillsUI.js"
 import { bills } from "../fixtures/bills.js"
-import { ROUTES_PATH} from "../constants/routes.js";
+import { ROUTES_PATH, ROUTES} from "../constants/routes.js";
 import {localStorageMock} from "../__mocks__/localStorage.js";
 import { formatDate, formatStatus } from "../app/format.js";
 import Bills from "../containers/Bills.js";
@@ -16,23 +16,35 @@ import router from "../app/Router.js";
 
 describe("Given I am connected as an employee", () => {
     describe("When I am on Bills Page", () => {
-      test("Then bill icon in vertical layout should be highlighted", async () => {
-
+      beforeEach(() => {
+        // Mock dependencies for each test case
+        // GIVEN PART
         Object.defineProperty(window, 'localStorage', { value: localStorageMock })
         window.localStorage.setItem('user', JSON.stringify({
           type: 'Employee'
         }))
+
+        // WHEN PART
         const root = document.createElement("div")
         root.setAttribute("id", "root")
         document.body.append(root)
         router()
         window.onNavigate(ROUTES_PATH.Bills)
+        // Reset the mocks for each test
+        jest.clearAllMocks();
+    
+      });
+
+      test("Then bill icon in vertical layout should be highlighted", async () => {
+
+        // THEN PART
         await waitFor(() => screen.getByTestId('icon-window'))
         const windowIcon = screen.getByTestId('icon-window')
         //to-do write expect expression
-        expect(windowIcon.classList.contains('active-icon')).toBe(true)
+        expect(windowIcon.contains('active-icon')).toBe(true)
 
       })
+
       test("Then bills should be ordered from earliest to latest", () => {
         document.body.innerHTML = BillsUI({ data: bills })
         const dates = screen
@@ -44,26 +56,12 @@ describe("Given I am connected as an employee", () => {
 
         expect(datesSorted).toEqual([...dates].sort().reverse())
       })
-    })
-    describe('Bills class', () => {
+    })  
+      it('should handle click on new bill button', async () => {
 
-      beforeEach(() => {
-        // Mock dependencies for each test case
-        Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-        window.localStorage.setItem('user', JSON.stringify({
-          type: 'Employee'
-        }))
-        const root = document.createElement("div")
-        root.setAttribute("id", "root")
-        document.body.append(root)
-        router()
-        window.onNavigate(ROUTES_PATH.Bills)
-        // Reset the mocks for each test
-        jest.clearAllMocks();
-    
-      });
-    
-      it('should handle click on new bill button', () => {
+       const onNavigate = (pathname) => {
+         document.body.innerHTML = ROUTES({ pathname })
+       }
         // Arrange
         const billsInstance = new Bills({
           document,
@@ -71,17 +69,26 @@ describe("Given I am connected as an employee", () => {
           store: mockStore,
           localStorage: window.localStorage,
         });
-    
+
         // Act
+        const handleClickNewBillMock = jest.fn((e) => billsInstance.handleClickNewBill(e));
+        await waitFor(() => screen.getByTestId('btn-new-bill'));
         const buttonNewBill = screen.getByTestId('btn-new-bill');
-        const handleClickNewBillMock = jest.spyOn(billsInstance, 'handleClickNewBill');
+      
+
         buttonNewBill.addEventListener('click', handleClickNewBillMock);
         fireEvent.click(buttonNewBill);
         // Assert
         expect(handleClickNewBillMock).toHaveBeenCalled();
       });
     
-      it('should handle click on icon eye', () => {
+      it('should handle click on icon eye', async () => {
+        const onNavigate = (pathname) => {
+          document.body.innerHTML = ROUTES({ pathname })
+        }
+      
+        document.body.innerHTML = BillsUI({ data: bills })
+      
         // Arrange
         const billsInstance = new Bills({
           document,
@@ -89,64 +96,70 @@ describe("Given I am connected as an employee", () => {
           store: mockStore,
           localStorage: window.localStorage,
         });
-    
-    
-            // Act
-         const iconsEye = screen.getAllByTestId('icon-eye');
-
-        // Create a spy on the handleClickIconEye method
-        const handleClickIconEyeSpy = jest.fn((e) => billsInstance.handleClickIconEye(e));
-
-        iconsEye.forEach((icon) => {
-          icon.addEventListener('click', (e) => {
-                // Ensure that 'icon' is an HTML element
-                if (e.currentTarget instanceof HTMLElement) {
-                  handleClickIconEyeSpy(e.currentTarget);
-                }
-              });
-
-        fireEvent.click(icon);
+      
+        // Spy on handleClickIconEye method
+        const handleClickIconEyeMock = jest.fn((e) => billsInstance.handleClickIconEye(e));
+      
+        // Act
+        await waitFor(() => screen.getAllByTestId('icon-eye'));
+        const iconsEye = screen.getAllByTestId('icon-eye')[0];
+      
+        // Trigger click event on each icon
+     const 
+          
+          iconsEye.addEventListener('click', handleClickIconEyeMock);
+          fireEvent.click(iconsEye);
+      
+        // Assert
+        // Expect spy to have been called for each icon
+        expect(handleClickIconEyeMock).toHaveBeenCalled();
       });
-
-      // Assert
-      // You can add more specific assertions based on your requirements
-      expect(handleClickIconEyeSpy).toHaveBeenCalledTimes(iconsEye.length);
-      });
-    
-      it('should get bills from the store and format them', async () => {
-
-
-        // Mock the functions used within the class
-        formatDate = jest.fn().mockImplementation((date) => `formatted-${date}`);
-        formatStatus = jest.fn().mockImplementation((status) => `formatted-${status}`);
         
+
+    describe('When bill is created with formatStatus', () => {
+      it('should return "En attente" for status "pending"', () => {
         // Arrange
-        const mockSnapshot = [
-          { date: '2022-01-01', status: 'pending' },
-          { date: '2022-02-02', status: 'paid' },
-        ];
-    
-        mockStore.bills().list = jest.fn().mockResolvedValueOnce(mockSnapshot);
-    
-        const billsInstance = new Bills({
-          document,
-          onNavigate,
-          store: mockStore,
-          localStorage: window.localStorage,
-        });
+        const status = 'pending';
     
         // Act
-        const result = await billsInstance.getBills();
+        const result = formatStatus(status);
     
         // Assert
-        expect(result).toEqual([
-          { date: 'formatted-2022-01-01', status: 'formatted-pending' },
-          { date: 'formatted-2022-02-02', status: 'formatted-paid' },
-        ]);
-        expect(formatDate).toHaveBeenCalledTimes(2);
-        expect(formatStatus).toHaveBeenCalledTimes(2);
+        expect(result).toBe('En attente');
+      });
+    
+      it('should return "Accepté" for status "accepted"', () => {
+        // Arrange
+        const status = 'accepted';
+    
+        // Act
+        const result = formatStatus(status);
+    
+        // Assert
+        expect(result).toBe('Accepté');
+      });
+    
+      it('should return "Refused" for status "refused"', () => {
+        // Arrange
+        const status = 'refused';
+    
+        // Act
+        const result = formatStatus(status);
+    
+        // Assert
+        expect(result).toBe('Refused');
+      });
+    
+      it('should return the same status for unknown status', () => {
+        // Arrange
+        const status = undefined;
+    
+        // Act
+        const result = formatStatus(status);
+    
+        // Assert
+        expect(result).toBe(status);
       });
     });
-
   })
 

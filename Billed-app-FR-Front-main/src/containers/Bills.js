@@ -2,7 +2,7 @@ import { ROUTES_PATH } from '../constants/routes.js'
 import { formatDate, formatStatus } from "../app/format.js"
 import Logout from "./Logout.js"
 
-export default class Bills {
+export default class {
   constructor({ document, onNavigate, store, localStorage }) {
     this.document = document
     this.onNavigate = onNavigate
@@ -21,21 +21,11 @@ export default class Bills {
   }
 
   handleClickIconEye = (icon) => {
-    const billUrl = icon.getAttribute("data-bill-url");
-    const modalFile = document.getElementById('modaleFile');
-  
-    if (modalFile) {
-      const modalBody = modalFile.querySelector('.modal-body');
-      const imgWidth = Math.floor(modalFile.offsetWidth * 0.5);
-  
-      if (modalBody) {
-        modalBody.innerHTML = `<div style='text-align: center;' class="bill-proof-container"><img width=${imgWidth} src=${billUrl} alt="Bill" /></div>`;
-      }
-  
-      modalFile.classList.add('show');
-    }
+    const billUrl = icon.getAttribute("data-bill-url")
+    const imgWidth = Math.floor($('#modaleFile').width() * 0.5)
+    $('#modaleFile').find(".modal-body").html(`<div style='text-align: center;' class="bill-proof-container"><img width=${imgWidth} src=${billUrl} alt="Bill" /></div>`)
+    $('#modaleFile').modal('show')
   }
-  
 
   getBills = () => {
     if (this.store) {

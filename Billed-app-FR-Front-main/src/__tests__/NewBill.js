@@ -199,7 +199,7 @@ describe('Given I am connected as an employee', () => {
         expect(newBill.billId).toBe('1234');
         expect(newBill.fileUrl).toBe('https://localhost:3456/images/test.jpg');
         expect(fileInput.files[0].name).toBe('test.jpg');
-        onNavigateMock(ROUTES_PATH.Bills);
+        
     })
 
   });
