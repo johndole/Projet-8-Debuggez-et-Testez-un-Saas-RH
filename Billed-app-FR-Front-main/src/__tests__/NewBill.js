@@ -186,6 +186,8 @@ describe("Given I am connected as an employee", () => {
       );
     });
 
+    //POST TEST
+
     test("It should create a new bill and redirect to Bills Page", async () => {
       // Capture instances of NewBill for configuring callbacks during testing
       const newBill = new NewBill({
