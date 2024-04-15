@@ -32,11 +32,24 @@ import router from "../app/Router.js";
 
 
 describe("Given I am connected as an employee", () => {
+  
 
   describe("When I am on Bills Page", () => {
 
     afterEach( () => {
       jest.clearAllMocks()
+    })
+    test('Then, Loading page should be rendered', () => {
+      document.body.innerHTML = BillsUI({ loading: true });
+  
+      expect(screen.getAllByText('Loading...')).toBeTruthy();
+    })
+
+    test("Then, The page got a title 'Mes notes de frais' and there is a button 'Nouvelle Note de frais'", () => {
+      document.body.innerHTML = BillsUI({ data: [] })
+
+      expect(screen.getAllByText("Mes notes de frais")).toBeTruthy()
+      expect(screen.getByTestId("btn-new-bill")).toBeTruthy()
     })
 
     test("Then bill icon in vertical layout should be highlighted", async () => {
@@ -50,15 +63,6 @@ describe("Given I am connected as an employee", () => {
       expect(windowIcon.classList.contains("active-icon")).toBeTruthy();
     });
 
-    test("Then bills should be ordered from earliest to latest", () => {
-      document.body.innerHTML = BillsUI({ data: bills })
-      const dates = screen.getAllByText(/^(19|20)\d\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$/i)
-      .map(a => a.innerHTML)
-      const antiChrono = (a, b) => (a < b ? 1 : -1);
-      const datesSorted = [...dates].sort(antiChrono)
-      expect(dates).toEqual(datesSorted)
-    })
-
     test("Then bills should be fetched successfully from mock API GET", async () => {
 
       const store = mockStore
@@ -71,47 +75,17 @@ describe("Given I am connected as an employee", () => {
       expect(bills.length).toBe(4)
     })
 
-    test('Then, Loading page should be rendered', () => {
-      document.body.innerHTML = BillsUI({ loading: true });
+    test("Then bills should be ordered from earliest to latest", () => {
+      document.body.innerHTML = BillsUI({ data: bills })
+      const dates = screen.getAllByText(/^(19|20)\d\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$/i)
+      .map(a => a.innerHTML)
+      const antiChrono = (a, b) => (a < b ? 1 : -1);
+      const datesSorted = [...dates].sort(antiChrono)
+      expect(dates).toEqual(datesSorted)
+    })
   
-      expect(screen.getAllByText('Loading...')).toBeTruthy();
-    })
-
-    test("Then, The page got a title 'Mes notes de frais' and there is a button 'Nouvelle Note de frais'", () => {
-      document.body.innerHTML = BillsUI({ data: [] })
-
-      expect(screen.getAllByText("Mes notes de frais")).toBeTruthy()
-      expect(screen.getByTestId("btn-new-bill")).toBeTruthy()
-    })
-    
   });
 
-  describe("When i am on Bills Page and an error occurs on API", () => {
-    beforeEach(() => {
-      jest.spyOn(mockStore, "bills")
-      
-    })
-    afterEach( () => {
-      jest.clearAllMocks()
-    })
-    test("Then fetches bills failed and we might have a 404 message error", async () => {
-
-      document.body.innerHTML = BillsUI({ error: "Erreur 404" })
-      const message = await screen.getByText(/Erreur 404/)
-
-      expect(message).toBeTruthy()
-    })
-
-    test("Then fetches bills failed and we might have a 500 message error", async () => {
-    
-      document.body.innerHTML = BillsUI({ error: "Erreur 500" })
-      const message = await screen.getByText(/Erreur 500/)
-
-      expect(message).toBeTruthy();
-    })
-  });
-
-  //test d’intégration sur la route POST
   describe("When I am on Bills Page and i click on new bill button", () => {
     afterEach( () => {
       jest.clearAllMocks()
@@ -184,53 +158,114 @@ describe("Given I am connected as an employee", () => {
       })
   });
 
-});
-
-describe('When i am on Bills Page, and I call getBills', () => {
-  afterEach( () => {
-    jest.clearAllMocks()
-  })
-  test('Then, it should log the length of bills array and return bills', async () => {
-    // Mock des données de facture avec le nouveau format de date
-     // Mocking snapshot of bills from the store
-     const snapshot = bills;
-
-    // Mocking bills with formatted dates and statuses
-    const formattedBills = snapshot.map(doc => ({
-      ...doc,
-      date: formatDate(doc.date),
-      status: formatStatus(doc.status)
-    }));
-
-    // Mocking store bills method
-    mockStore.bills().list = jest.fn().mockResolvedValue(snapshot);
-
-
-    // Initialiser le HTML de la page Bills
-    document.body.innerHTML = BillsUI({ data: bills });
-
-    // Initialiser une instance de Bills
-    const billInstance = new Bills({
-      document,
-      onNavigate,
-      store: mockStore,
-      localStorage: window.localStorage,
+  describe('When i am on Bills Page, and I call getBills', () => {
+    afterEach( () => {
+      jest.clearAllMocks()
+    })
+    test('Then, it should log the length of bills array and return bills with correct format', async () => {
+      // Mock des données de facture avec le nouveau format de date
+       // Mocking snapshot of bills from the store
+      const snapshot = bills;
+  
+      // Mocking bills with formatted dates and statuses
+      const formattedBills = snapshot.map(doc => ({
+        ...doc,
+        date: formatDate(doc.date),
+        status: formatStatus(doc.status)
+      }));
+  
+      // Mocking store bills method
+      mockStore.bills().list = jest.fn().mockResolvedValue(snapshot);
+  
+      // Initialiser le HTML de la page Bills
+      document.body.innerHTML = BillsUI({ data: bills });
+  
+      // Initialiser une instance de Bills
+      const billInstance = new Bills({
+        document,
+        onNavigate,
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
+  
+      // Espionner console.log
+      const consoleLogSpy = jest.spyOn(console, 'log');
+  
+      // Appeler la méthode getBills
+      const result = await billInstance.getBills();
+  
+      // S'attendre à ce que console.log ait été appelé avec les bons arguments
+      expect(consoleLogSpy).toHaveBeenCalledWith('length', bills.length);
+      // S'attendre à ce que les factures retournées soient identiques aux factures avec les dates formatées
+      expect(result).toEqual(formattedBills);
+      expect(result).toHaveLength(bills.length);
     });
-
-    // Espionner console.log
-    const consoleLogSpy = jest.spyOn(console, 'log');
-
-    // Appeler la méthode getBills
-    const result = await billInstance.getBills();
-
-    // S'attendre à ce que console.log ait été appelé avec les bons arguments
-    expect(consoleLogSpy).toHaveBeenCalledWith('length', bills.length);
-    // S'attendre à ce que les factures retournées soient identiques aux factures avec les dates formatées
-    expect(result).toEqual(formattedBills);
-    expect(result).toHaveLength(bills.length);
+  
   });
 
+  describe("When an error occurs on API", () => {
+    beforeEach(() => {
+     
+      jest.spyOn(mockStore, "bills");
+  
+    });
+    afterEach( () => {
+      jest.clearAllMocks()
+    })
+
+    test("fetches bills from an API and fails with 404 message error", async () => {
+      mockStore.bills.mockImplementationOnce(() => {
+        return {
+          list: () => {
+            return Promise.reject(new Error("Erreur 404"));
+          },
+        };
+      });
+      window.onNavigate(ROUTES_PATH.Bills);
+      await new Promise(process.nextTick);
+      document.body.innerHTML = BillsUI({ error: "Erreur 404" });
+      const message = await screen.getByText(/Erreur 404/);
+      expect(message).toBeTruthy();
+      expect(message).toMatchInlineSnapshot(`
+        <div
+          data-testid="error-message"
+        >
+          
+                  Erreur 404
+                
+        </div>
+      `);
+    });
+
+    test("fetches messages from an API and fails with 500 message error", async () => {
+      mockStore.bills.mockImplementationOnce(() => {
+        return {
+          list: () => {
+            return Promise.reject(new Error("Erreur 500"));
+          },
+        };
+      });
+      window.onNavigate(ROUTES_PATH.Bills);
+      await new Promise(process.nextTick);
+      document.body.innerHTML = BillsUI({ error: "Erreur 500" });
+      const message = await screen.getByText(/Erreur 500/);
+      expect(message).toBeTruthy();
+      expect(message).toMatchInlineSnapshot(`
+        <div
+          data-testid="error-message"
+        >
+          
+                  Erreur 500
+                
+        </div>
+      `);
+    });
+  });
+  
+
 });
+
+
 
 
 
