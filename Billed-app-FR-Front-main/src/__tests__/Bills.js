@@ -40,11 +40,12 @@ describe("Given I am connected as an employee", () => {
     })
 
     test("Then bill icon in vertical layout should be highlighted", async () => {
-    
+      
       await waitFor(() => screen.getByTestId("icon-window"));
       const windowIcon = screen.getByTestId("icon-window");
+      //TODO
       // Vérifie si l'élément a la classe 'active-icon'
-      expect(windowIcon).toBeTruthy();
+      expect(windowIcon.classList.contains("active-icon")).toBeTruthy();
     });
 
     test("Then bills should be ordered from earliest to latest", () => {
