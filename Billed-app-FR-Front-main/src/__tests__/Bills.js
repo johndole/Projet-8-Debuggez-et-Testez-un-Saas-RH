@@ -111,6 +111,7 @@ describe("Given I am connected as an employee", () => {
     })
   });
 
+  //test d’intégration sur la route POST
   describe("When I am on Bills Page and i click on new bill button", () => {
     afterEach( () => {
       jest.clearAllMocks()
