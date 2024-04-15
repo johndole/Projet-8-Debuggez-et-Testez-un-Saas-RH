@@ -40,6 +40,8 @@ describe("Given I am connected as an employee", () => {
     })
 
     test("Then bill icon in vertical layout should be highlighted", async () => {
+ 
+      window.onNavigate(ROUTES_PATH.Bills)
       
       await waitFor(() => screen.getByTestId("icon-window"));
       const windowIcon = screen.getByTestId("icon-window");
