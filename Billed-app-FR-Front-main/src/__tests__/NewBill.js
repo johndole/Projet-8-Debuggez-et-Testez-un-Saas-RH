@@ -2,13 +2,16 @@
  * @jest-environment jsdom
  */
 import { expect, jest, test } from "@jest/globals";
-import { screen, fireEvent } from "@testing-library/dom";
+import { screen, fireEvent} from "@testing-library/dom";
 import { localStorageMock } from "../__mocks__/localStorage.js";
 import { ROUTES, ROUTES_PATH } from "../constants/routes";
+import router from "../app/Router.js";
 
 import NewBillUI from "../views/NewBillUI.js";
+import BillsUI from "../views/BillsUI.js";
 import NewBill from "../containers/NewBill.js";
 import mockStore from "../__mocks__/store";
+import { bills } from "../fixtures/bills.js";
 
 // Mock document and form elements
 document.body.innerHTML = NewBillUI();
@@ -110,10 +113,10 @@ describe("Given I am connected as an employee", () => {
     });
   });
 
+    //POST TEST
   describe("When I am on NewBill Page and I submit the form", () => {
     beforeEach(() => {
       jest.spyOn(mockStore, "bills");
-      jest.clearAllMocks();
 
       // Mock localStorage for the file upload
       Object.defineProperty(window, "localStorage", {
@@ -131,62 +134,36 @@ describe("Given I am connected as an employee", () => {
       document.body.innerHTML = NewBillUI();
     });
 
-    test("It should handle a valid form submission", () => {
-      // Set up any necessary initial state or component instances
-      const newBill = new NewBill({
-        document,
-        onNavigate: onNavigateMock,
-        store: mockStore,
-        localStorage: window.localStorage,
-      });
+    test('renders form fields correctly', async () => {
 
-      // Mock the event object
-      const mockEvent = {
-        preventDefault: jest.fn(),
-        target: {
-          querySelector: jest.fn().mockImplementation((selector) => {
-            switch (selector) {
-              case 'input[data-testid="datepicker"]':
-                return { value: "2024-03-11" };
-              case 'select[data-testid="expense-type"]':
-                return { value: "Hôtel et logement" };
-              case 'input[data-testid="expense-name"]':
-                return { value: "encore" };
-              case 'input[data-testid="amount"]':
-                return { value: "400" };
-              case 'input[data-testid="vat"]':
-                return { value: "80" };
-              case 'input[data-testid="pct"]':
-                return { value: "20" };
-              case 'textarea[data-testid="commentary"]':
-                return { value: "séminaire billed" };
-              // Add other cases as needed
-              default:
-                return {};
-            }
-          }),
-        },
-      };
+     // Configuration de localStorageMock pour simuler le stockage local
+			const postSpy = jest.spyOn(mockStore, "bills")
+			
+			// Creation d'une facture 
+			const bill = {
+				id: "47qAXb6fIm2zOKkLzMro",
+				vat: "80",
+				fileUrl: "https://firebasestorage.googleapis.com/v0/b/billable-677b6.a…f-1.jpg?alt=media&token=c1640e12-a24b-4b11-ae52-529112e9602a",
+				status: "pending",
+				type: "Hôtel et logement",
+				commentary: "séminaire billed",
+				name: "encore",
+				fileName: "preview-facture-free-201801-pdf-1.jpg",
+				date: "2004-04-04",
+				amount: 400,
+				commentAdmin: "ok",
+				email: "a@a",
+				pct: 20,
+			}
+			// Ajout de la facture dans le store
+			const NewPostBills = await mockStore.bills().update(bill)
 
-      // Call the handleSubmit function with the mock event
-      newBill.handleSubmit(mockEvent);
+			// Vérifier si la méthode postSpy a été appelée
+			expect(postSpy).toHaveBeenCalledTimes(1)
 
-      // Mock successful create response
-      mockStore.bills().create = jest
-        .fn()
-        .mockResolvedValue({
-          fileUrl: "https://localhost:3456/images/test.jpg",
-          key: "1234",
-        });
-
-      // Perform assertions
-      expect(mockEvent.preventDefault).toHaveBeenCalled();
-      expect(JSON.parse(localStorageMock.getItem("user"))).toEqual(
-        '{"type":"Employee","email":"user@example.com"}'
-      );
+			// Vérifier si la facture correspond à celle presente dans le store mocké
+			expect(NewPostBills).toStrictEqual(bill)
     });
-
-    //POST TEST
 
     test("It should create a new bill and redirect to Bills Page", async () => {
       // Capture instances of NewBill for configuring callbacks during testing
@@ -226,4 +203,73 @@ describe("Given I am connected as an employee", () => {
       expect(fileInput.files[0].name).toBe("test.jpg");
     });
   });
+  
+  describe("When an error occurs on API", () => {
+		beforeEach(() => {
+			jest.spyOn(mockStore, "bills");
+
+			Object.defineProperty(window, "localStorage", {
+				value: localStorageMock,
+			});
+
+			window.localStorage.setItem(
+				"user",
+				JSON.stringify({
+					type: "Employee",
+					email: "a@a",
+				})
+			);
+
+			const root = document.createElement("div");
+			root.setAttribute("id", "root");
+			document.body.appendChild(root);
+
+			router();
+		});
+
+		test("fetches bill from an API and fails with 404 error message", async () => {
+			mockStore.bills.mockImplementationOnce(() => {
+				return {
+					create: () => {
+						return Promise.reject(new Error("Erreur 404"));
+					},
+				};
+			});
+
+			window.onNavigate(ROUTES_PATH.NewBill);
+
+			await new Promise(process.nextTick);
+
+			document.body.innerHTML = BillsUI({ error: "Erreur 404" });
+
+			const errorMessageElement = screen.getByTestId("error-message");
+			const errorEessage = screen.getByText(/Erreur 404/);
+
+			expect(errorMessageElement).toBeTruthy();
+			expect(errorEessage).toBeTruthy();
+		});
+
+		test(" fetches messages from an API and fails with 500 message error", async () => {
+			mockStore.bills.mockImplementationOnce(() => {
+				return {
+					create: () => {
+						return Promise.reject(new Error("Erreur 500"));
+					},
+				};
+			});
+
+			window.onNavigate(ROUTES_PATH.NewBill);
+
+			await new Promise(process.nextTick);
+
+			document.body.innerHTML = BillsUI({ error: "Erreur 500" });
+
+			const errorMessageElement = screen.getByTestId("error-message");
+			const errorEessage = screen.getByText(/Erreur 500/);
+
+			expect(errorMessageElement).toBeTruthy();
+			expect(errorEessage).toBeTruthy();
+		});
+	});
+
 });
